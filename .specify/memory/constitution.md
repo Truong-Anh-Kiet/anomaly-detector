@@ -1,50 +1,78 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!-- 
+SYNC IMPACT REPORT
+==================
+Version Change: INIT → 1.0.0 (Initial Constitution)
+Created: 2026-03-11
+Principles Added: 5 core principles
+Sections: Technology Stack, Development Workflow & Quality Gates
+Dependencies: spec-template.md, plan-template.md, tasks-template.md (✅ reviewed)
+No breaking changes; first version establishes baseline.
+-->
+
+# Anomaly Detector Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Clean Architecture
+Backend and frontend MUST strictly follow clean architecture patterns with clear separation of concerns. Backend: domain → use case → interface adapters → framework/database layers. Frontend: components → custom hooks → services → API clients. No business logic in presentation layers; circular dependencies prohibited.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Quality-First Development
+Every code change requires TDD discipline: write tests that fail → implement feature → refactor. Code review MUST verify unit test coverage (minimum 80% for changed files) and integration tests for API contracts. No production code merges without passing CI/CD gates. Linting and formatting (Python: ruff + black; JavaScript: ESLint + Prettier) MUST enforce consistency automatically.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. User-Centric Excellence
+All features must be validated against user scenarios (acceptance criteria) before marking complete. Frontend MUST prioritize intuitive UX with clear feedback loops. Backend MUST provide comprehensive error messages and API response clarity. Performance metrics MUST be tracked: UI responsiveness (target <100ms interaction latency), API p95 latency, error resolution time.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Performance & Observability
+Every new backend feature MUST include structured logging (correlation IDs, request tracing). Database queries MUST be indexed appropriately; N+1 query problems prohibited. Frontend MUST monitor bundle size (<500KB gzipped for initial load) and Core Web Vitals (LCP, FID, CLS). Anomaly detection accuracy MUST be continuously tracked with metrics dashboards.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Dependency Management via UV
+Python backend dependency management MUST use UV exclusively (no pip directly). Lock files MUST be committed (uv.lock). All transitive dependencies pinned for reproducible builds. Frontend dependencies managed via npm with package-lock.json committed. Dependencies updated monthly with security audit (govulncheck equivalent for JS).
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technology Stack & Runtime Requirements
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Backend**:
+- Python 3.12 with UV dependency manager
+- Framework/Libraries: FastAPI (or equivalent for RESTful APIs)
+- Database: PostgreSQL (if persistence needed) or SQLite for prototypes
+- Testing: pytest with coverage reporting
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Frontend**:
+- ReactJS (latest stable)
+- Node.js v24.13 (minimum; prefer LTS if available)
+- Build tooling: Vite or Webpack
+- Testing: Vitest + React Testing Library
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+**Shared**:
+- Version control: Git with main + feature branches
+- Environment: Python 3.12, Node 24.13 explicitly pinned
+- Monorepo structure: `/backend` for Python, `/frontend` for React
+
+## Development Workflow & Quality Gates
+
+**Code Review Requirements**:
+- All PRs MUST have at least one approval before merge.
+- Review checklist: (1) Tests pass locally, (2) Coverage meets threshold, (3) No console errors/warnings, (4) Architecture compliance verified, (5) Performance impact assessed.
+
+**Testing Gates**:
+- Unit tests REQUIRED for all business logic (target 80%+ coverage).
+- Integration tests REQUIRED for API contracts and database interactions.
+- Contract tests MUST validate backend-frontend API compatibility.
+- No test skips (`.skip()`, `.only()`) in main branch.
+
+**Quality Enforcement**:
+- Pre-commit hooks MUST run linters and formatters (fail if violations detected).
+- CI/CD pipeline fails on:
+  - Test failures or coverage drops below 80%
+  - Linting violations
+  - Type checking errors (TypeScript/mypy)
+  - Security vulnerabilities (snyk, bandit for Python)
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+**Amendments**: Constitution changes require explicit documentation (reason + migration impact) and developer consensus. Version bumping follows semantic versioning: MAJOR (principle removal/redefinition), MINOR (new principle/section), PATCH (clarifications/typos).
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Compliance Verification**: All pull requests to main MUST declare which principle(s) they address. Complexity that violates principles requires explicit justification in PR description.
+
+**Runtime Guidance**: See `.github/procedures.md` (if exists) or project README for development setup and daily workflow practices. This constitution is the source of truth for governance; procedures documents provide operational implementation specifics.
+
+**Version**: 1.0.0 | **Ratified**: 2026-03-11 | **Last Amended**: 2026-03-11
