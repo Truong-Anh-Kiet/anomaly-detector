@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from src.main import create_app
 from src.database import Base
 from src.dependencies import get_db
+from src.models import User
 
 
 @pytest.fixture(scope="session")
@@ -59,3 +60,89 @@ def test_client(test_db_session):
     
     with TestClient(app) as client:
         yield client
+
+
+# User fixtures for role-based tests
+@pytest.fixture
+def admin_user(test_db_session):
+    """Create an admin test user"""
+    user = User(
+        user_id="admin_user",
+        username="admin",
+        email="admin@example.com",
+        full_name="Admin User",
+        password_hash="hashed_password",
+        role="admin",
+    )
+    test_db_session.add(user)
+    test_db_session.commit()
+    return user
+
+
+@pytest.fixture
+def analyst_user(test_db_session):
+    """Create an analyst test user"""
+    user = User(
+        user_id="analyst_user",
+        username="analyst",
+        email="analyst@example.com",
+        full_name="Analyst User",
+        password_hash="hashed_password",
+        role="analyst",
+    )
+    test_db_session.add(user)
+    test_db_session.commit()
+    return user
+
+
+@pytest.fixture
+def auditor_user(test_db_session):
+    """Create an auditor test user"""
+    user = User(
+        user_id="auditor_user",
+        username="auditor",
+        email="auditor@example.com",
+        full_name="Auditor User",
+        password_hash="hashed_password",
+        role="auditor",
+    )
+    test_db_session.add(user)
+    test_db_session.commit()
+    return user
+
+
+@pytest.fixture
+def guest_user(test_db_session):
+    """Create a guest test user"""
+    user = User(
+        user_id="guest_user",
+        username="guest",
+        email="guest@example.com",
+        full_name="Guest User",
+        password_hash="hashed_password",
+        role="guest",
+    )
+    test_db_session.add(user)
+    test_db_session.commit()
+    return user
+
+
+# Alias for consistency across tests
+@pytest.fixture
+def db_session(test_db_session):
+    """Alias for test_db_session"""
+    return test_db_session
+
+
+# Pytest configuration
+def pytest_configure(config):
+    """Configure pytest"""
+    config.addinivalue_line(
+        "markers", "asyncio: mark test as async"
+    )
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test"
+    )
+    config.addinivalue_line(
+        "markers", "unit: mark test as unit test"
+    )

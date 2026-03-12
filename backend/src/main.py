@@ -7,6 +7,11 @@ from contextlib import asynccontextmanager
 
 from src.config import get_settings
 from src.database import init_db
+from src.api.websocket import router as websocket_router
+from src.api.anomalies import router as anomalies_router
+from src.api.audit_logs import router as audit_logs_router
+from src.api.users import router as users_router
+from src.api.categories import router as categories_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +68,15 @@ def create_app() -> FastAPI:
             "docs": "/docs",
             "openapi": "/openapi.json",
         }
+
+    # Include WebSocket routes
+    app.include_router(websocket_router)
+    
+    # Include API routers
+    app.include_router(anomalies_router)
+    app.include_router(audit_logs_router)
+    app.include_router(users_router)
+    app.include_router(categories_router)
 
     return app
 
