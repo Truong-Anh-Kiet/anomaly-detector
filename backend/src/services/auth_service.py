@@ -1,13 +1,15 @@
 """Authentication service for user management and JWT"""
 
-from datetime import datetime, timedelta
-from passlib.context import CryptContext
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
-from src.config import get_settings
-from src.models import User, RoleEnum
-from src.schemas.user import UserCreate, TokenPayload
 import logging
+from datetime import datetime, timedelta
+
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
+
+from src.config import get_settings
+from src.models import RoleEnum, User
+from src.schemas.user import TokenPayload, UserCreate
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,7 @@ class AuthService:
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
-        
+
         logger.info(f"Created new user: {user_create.username} with role {role}")
         return db_user
 
@@ -57,7 +59,7 @@ class AuthService:
         user = db.query(User).filter(User.username == username).first()
         if not user:
             return None
-        
+
         if not self.verify_password(password, user.password_hash):
             return None
 
@@ -65,7 +67,7 @@ class AuthService:
         user.last_login = datetime.utcnow()
         db.commit()
         db.refresh(user)
-        
+
         return user
 
     def create_access_token(self, user: User, expires_delta: timedelta = None) -> str:
@@ -83,7 +85,7 @@ class AuthService:
             "exp": expire,
             "token_type": "access",
         }
-        
+
         encoded_jwt = jwt.encode(
             payload,
             self.settings.jwt_secret_key,
@@ -100,7 +102,7 @@ class AuthService:
             "exp": expire,
             "token_type": "refresh",
         }
-        
+
         encoded_jwt = jwt.encode(
             payload,
             self.settings.jwt_secret_key,

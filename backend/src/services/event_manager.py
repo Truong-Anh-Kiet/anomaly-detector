@@ -3,17 +3,15 @@ WebSocket Event System
 Real-time event broadcasting for anomaly detection system
 """
 
-from typing import Callable, Dict, List, Set
-from enum import Enum
-from dataclasses import dataclass, asdict
-from datetime import datetime
-import json
 import logging
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
 
-class EventType(str, Enum):
+class EventType(StrEnum):
     """WebSocket event types"""
     ANOMALY_DETECTED = "anomaly_detected"
     THRESHOLD_EXCEEDED = "threshold_exceeded"
@@ -25,7 +23,7 @@ class EventType(str, Enum):
     HEARTBEAT = "heartbeat"
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     """Notification severity levels"""
     INFO = "info"
     WARNING = "warning"
@@ -139,7 +137,7 @@ class EventConnection:
         self.connection_id = connection_id
         self.user_id = user_id
         self.role = role
-        self.subscribed_events: Set[EventType] = set()
+        self.subscribed_events: set[EventType] = set()
         self.connected_at = datetime.utcnow()
         self.last_heartbeat = datetime.utcnow()
 
@@ -169,9 +167,9 @@ class EventManager:
     """Manages WebSocket connections and event broadcasting"""
 
     def __init__(self):
-        self.connections: Dict[str, EventConnection] = {}
-        self.event_handlers: Dict[EventType, List[Callable]] = {}
-        self.event_history: List[dict] = []
+        self.connections: dict[str, EventConnection] = {}
+        self.event_handlers: dict[EventType, list[callable]] = {}
+        self.event_history: list[dict] = []
         self.max_history_size = 1000
 
     def add_connection(self, connection: EventConnection):
@@ -189,7 +187,7 @@ class EventManager:
         """Get connection by ID"""
         return self.connections.get(connection_id)
 
-    def get_user_connections(self, user_id: str) -> List[EventConnection]:
+    def get_user_connections(self, user_id: str) -> list[EventConnection]:
         """Get all connections for a user"""
         return [
             conn for conn in self.connections.values()
@@ -210,7 +208,7 @@ class EventManager:
             conn.unsubscribe(event_type)
             logger.debug(f"Connection {connection_id} unsubscribed from {event_type.value}")
 
-    def register_handler(self, event_type: EventType, handler: Callable):
+    def register_handler(self, event_type: EventType, handler: callable):
         """Register a callback handler for an event type"""
         if event_type not in self.event_handlers:
             self.event_handlers[event_type] = []
@@ -221,7 +219,7 @@ class EventManager:
         if event_type:
             event['event_type'] = event_type.value
             event['type'] = event_type.value
-        
+
         # Add to history
         self._add_to_history(event)
 
@@ -229,7 +227,7 @@ class EventManager:
         if event_type and event_type in self.event_handlers:
             for handler in self.event_handlers[event_type]:
                 try:
-                    if hasattr(handler, '__call__'):
+                    if callable(handler):
                         result = handler(event)
                         # Handle async handlers
                         import inspect
@@ -272,7 +270,7 @@ class EventManager:
             'stored_at': datetime.utcnow().isoformat()
         }
         self.event_history.append(event_with_timestamp)
-        
+
         # Keep history size bounded
         if len(self.event_history) > self.max_history_size:
             self.event_history.pop(0)
@@ -286,7 +284,7 @@ class EventManager:
         """Get connection statistics"""
         total_connections = len(self.connections)
         role_breakdown = {}
-        
+
         for conn in self.connections.values():
             role = conn.role
             role_breakdown[role] = role_breakdown.get(role, 0) + 1

@@ -1,9 +1,9 @@
 """ML model interface for loading and inference"""
 
-import joblib
 import logging
 from pathlib import Path
-from typing import Optional
+
+import joblib
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -36,28 +36,28 @@ class AnomalyModel:
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         Run model inference.
-        
+
         Args:
             X: Input features array
-            
+
         Returns:
             Array of anomaly scores (0-1 for Isolation Forest)
         """
         if not self.loaded or self.model is None:
             raise RuntimeError("Model not loaded")
-        
+
         try:
             # Isolation Forest returns -1 for anomalies, 1 for normal
             # Convert to 0-1 score: anomaly=1, normal=0
             predictions = self.model.predict(X)
             scores = np.where(predictions == -1, 1.0, 0.0)
-            
+
             # Try to get anomaly scores if available
             if hasattr(self.model, 'score_samples'):
                 raw_scores = self.model.score_samples(X)
                 # Normalize to 0-1 range based on quantiles
                 scores = self._normalize_scores(raw_scores)
-            
+
             return scores
         except Exception as e:
             logger.error(f"Prediction error: {e}")
@@ -68,7 +68,7 @@ class AnomalyModel:
         # Min-max normalization based on data range
         min_score = np.percentile(scores, 5)
         max_score = np.percentile(scores, 95)
-        
+
         normalized = (scores - min_score) / (max_score - min_score)
         normalized = np.clip(normalized, 0, 1)
         return normalized

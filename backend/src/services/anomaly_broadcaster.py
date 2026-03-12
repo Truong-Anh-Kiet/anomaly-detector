@@ -3,21 +3,21 @@ Anomaly Event Broadcasting Service
 Broadcasts anomaly detection and threshold events in real-time
 """
 
+import logging
 from typing import Optional
+
 from sqlalchemy.orm import Session
+
+from src.models import Anomaly
 from src.services.event_manager import (
     AnomalyEvent,
+    EventType,
+    Severity,
+    SystemAlertEvent,
     ThresholdEvent,
     UserActionEvent,
-    SystemAlertEvent,
-    Severity,
-    EventType,
     get_event_manager,
 )
-from src.models import Anomaly, AnoditLog, User
-import logging
-from datetime import datetime
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +31,11 @@ class AnomalyEventBroadcaster:
     async def broadcast_anomaly_detected(
         self,
         anomaly: Anomaly,
-        db: Optional[Session] = None,
+        db: Session | None = None,
     ):
         """
         Broadcast anomaly detection event
-        
+
         Args:
             anomaly: Detected anomaly object
             db: Database session (optional)
@@ -77,11 +77,11 @@ class AnomalyEventBroadcaster:
         category: str,
         current_value: float,
         threshold: float,
-        db: Optional[Session] = None,
+        db: Session | None = None,
     ):
         """
         Broadcast threshold exceeded event
-        
+
         Args:
             category: Anomaly category
             current_value: Current metric value
@@ -121,11 +121,11 @@ class AnomalyEventBroadcaster:
         resource_type: str = "",
         resource_id: str = "",
         details: dict = None,
-        db: Optional[Session] = None,
+        db: Session | None = None,
     ):
         """
         Broadcast user action event
-        
+
         Args:
             user_id: User performing action
             action: Action name (e.g., "update_status", "export_data")
@@ -167,7 +167,7 @@ class AnomalyEventBroadcaster:
     ):
         """
         Broadcast system-level alert
-        
+
         Args:
             alert_type: Type of system alert
             title: Alert title
@@ -230,7 +230,7 @@ class AnomalyEventBroadcaster:
 
 
 # Global broadcaster instance
-_broadcaster: Optional[AnomalyEventBroadcaster] = None
+_broadcaster: AnomalyEventBroadcaster | None = None
 
 
 def get_anomaly_broadcaster() -> AnomalyEventBroadcaster:

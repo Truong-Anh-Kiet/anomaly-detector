@@ -1,11 +1,11 @@
 """User and authentication related Pydantic schemas"""
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
-from enum import Enum
-from typing import List, Optional
 
 
-class RoleEnum(str, Enum):
+class RoleEnum(StrEnum):
     """User role enumeration"""
     ADMIN = "ADMIN"
     MANAGER = "MANAGER"
@@ -26,9 +26,9 @@ class UserResponse(UserBase):
     """User response schema (excludes password_hash)"""
     user_id: str
     role: RoleEnum
-    assigned_categories: Optional[List[str]] = None
+    assigned_categories: list[str] | None = None
     created_at: str
-    last_login: Optional[str] = None
+    last_login: str | None = None
 
     class Config:
         from_attributes = True
@@ -38,7 +38,7 @@ class TokenPayload(BaseModel):
     """JWT token payload schema"""
     sub: str  # user_id
     role: RoleEnum
-    assigned_categories: Optional[List[str]] = None
+    assigned_categories: list[str] | None = None
     exp: int  # expiration timestamp
     token_type: str = "access"
 

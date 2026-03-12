@@ -1,12 +1,11 @@
 """Anomaly detection related Pydantic schemas"""
 
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
-from enum import Enum
-from datetime import datetime
-from typing import Optional, List
 
 
-class CauseEnum(str, Enum):
+class CauseEnum(StrEnum):
     """Anomaly cause classification"""
     STATISTICAL_SPIKE = "statistical_spike"
     ML_PATTERN_ANOMALY = "ml_pattern_anomaly"
@@ -15,13 +14,13 @@ class CauseEnum(str, Enum):
     NORMAL = "normal"
 
 
-class ResultEnum(str, Enum):
+class ResultEnum(StrEnum):
     """Anomaly detection result"""
     NORMAL = "Normal"
     ANOMALY = "Anomaly"
 
 
-class SeverityEnum(str, Enum):
+class SeverityEnum(StrEnum):
     """Anomaly severity level"""
     LOW = "low"
     MEDIUM = "medium"
@@ -71,11 +70,11 @@ class AnomalyDetail(BaseModel):
 
 class AnomalyFilterParams(BaseModel):
     """Query parameters for anomaly filtering"""
-    date_from: Optional[str] = None
-    date_to: Optional[str] = None
-    categories: Optional[List[str]] = None
-    severity: Optional[List[SeverityEnum]] = None
-    anomaly_type: Optional[List[CauseEnum]] = None
+    date_from: str | None = None
+    date_to: str | None = None
+    categories: list[str] | None = None
+    severity: list[SeverityEnum] | None = None
+    anomaly_type: list[CauseEnum] | None = None
     page: int = Field(1, ge=1)
     page_size: int = Field(50, ge=1, le=500)
 
@@ -85,11 +84,11 @@ class TimeseriesPoint(BaseModel):
     date: str
     amount: float
     is_anomaly: bool
-    combined_score: Optional[float] = None
-    explanation: Optional[str] = None
+    combined_score: float | None = None
+    explanation: str | None = None
 
 
 class TimeseriesResponse(BaseModel):
     """Timeseries data for charting"""
     category: str
-    data: List[TimeseriesPoint]
+    data: list[TimeseriesPoint]

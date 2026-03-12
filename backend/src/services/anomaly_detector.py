@@ -1,14 +1,14 @@
 """Anomaly detection service with statistical and ML methods"""
 
-import numpy as np
-import pandas as pd
 import logging
-from typing import List, Tuple, Optional
 from datetime import datetime, timedelta
+
+import numpy as np
 from sqlalchemy.orm import Session
-from src.models import Transaction, AnomalyDetectionResult, CauseEnum, ResultEnum
-from src.schemas.anomaly import SeverityEnum
+
 from src.ml.anomaly_model import AnomalyModel
+from src.models import AnomalyDetectionResult, CauseEnum, ResultEnum, Transaction
+from src.schemas.anomaly import SeverityEnum
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,12 @@ class AnomalyDetectionService:
     # Hybrid detection weights
     STATS_WEIGHT = 0.4
     ML_WEIGHT = 0.6
-    
+
     # Thresholds
     STATS_THRESHOLD = 8  # Modified Z-score threshold
     ML_THRESHOLD = 0.7  # Isolation Forest anomaly score
     COMBINED_THRESHOLD = 0.5  # Combined score threshold
-    
+
     # Severity thresholds
     SEVERITY_MEDIUM = 0.6
     SEVERITY_HIGH = 0.8
@@ -36,17 +36,17 @@ class AnomalyDetectionService:
     def detect_anomalies(
         self,
         db: Session,
-        transactions: List[Transaction],
+        transactions: list[Transaction],
         model_version: str,
-    ) -> List[Tuple[Transaction, AnomalyDetectionResult]]:
+    ) -> list[tuple[Transaction, AnomalyDetectionResult]]:
         """
         Detect anomalies using hybrid approach (statistical + ML).
-        
+
         Args:
             db: Database session
             transactions: List of Transaction objects to analyze
             model_version: Model version identifier for audit trail
-            
+
         Returns:
             List of (transaction, result) tuples
         """
@@ -65,7 +65,7 @@ class AnomalyDetectionService:
         for category, txns in category_groups.items():
             # Get historical transactions for statistical baseline
             historical = self._get_historical_transactions(db, category)
-            
+
             # Prepare data
             amounts = np.array([t.amount for t in txns]).reshape(-1, 1)
 
@@ -135,7 +135,7 @@ class AnomalyDetectionService:
     ) -> np.ndarray:
         """
         Statistical anomaly detection using Modified Z-score.
-        
+
         Uses Median Absolute Deviation (MAD) for robust outlier detection.
         Formula: modified_zscore = 0.6745 * (x - median) / MAD
         Threshold: |zscore| > 8
@@ -147,23 +147,23 @@ class AnomalyDetectionService:
         # Calculate robust statistics
         median = np.median(historical)
         mad = np.median(np.abs(historical - median))
-        
+
         if mad == 0:
             mad = 1  # Prevent division by zero
 
         # Calculate modified Z-scores
         zscore = 0.6745 * (amounts.flatten() - median) / (mad + 1e-8)
-        
+
         # Convert to anomaly score (0-1)
         # Threshold at 8, normalize to 0-1 scale
         anomaly_score = np.minimum(np.abs(zscore) / self.STATS_THRESHOLD, 1.0)
-        
+
         return anomaly_score
 
     def _ml_detection(self, amounts: np.ndarray) -> np.ndarray:
         """
         ML-based anomaly detection using Isolation Forest.
-        
+
         Returns normalized anomaly scores (0-1) where 1 is max anomaly.
         """
         if not self.model.loaded:
@@ -174,10 +174,10 @@ class AnomalyDetectionService:
             # Feature engineering: create window features for time-series context
             # In production, this would include window statistics
             features = self._engineer_features(amounts)
-            
+
             # Run inference
             scores = self.model.predict(features)
-            
+
             return scores
         except Exception as e:
             logger.error(f"ML detection error: {e}")
@@ -195,7 +195,7 @@ class AnomalyDetectionService:
     ) -> CauseEnum:
         """
         Classify anomaly cause based on detection method scores.
-        
+
         STATISTICAL_SPIKE: High stats score, lower ML score (statistical outlier)
         ML_PATTERN_ANOMALY: High ML score, lower stats score (pattern-based)
         HYBRID_CONFIRMED: Both scores high (strong confirmation)
@@ -203,10 +203,10 @@ class AnomalyDetectionService:
         """
         if combined_score < self.COMBINED_THRESHOLD:
             return CauseEnum.NORMAL
-        
+
         stats_dominant = stats_score > (ml_score + 0.2)
         ml_dominant = ml_score > (stats_score + 0.2)
-        
+
         if stats_dominant:
             return CauseEnum.STATISTICAL_SPIKE
         elif ml_dominant:
@@ -221,11 +221,11 @@ class AnomalyDetectionService:
         ml_score: float,
         combined_score: float,
         cause: CauseEnum,
-    ) -> Tuple[str, str]:
+    ) -> tuple[str, str]:
         """Generate human-readable explanations for anomaly"""
         base_explanation = f"Amount: {transaction.amount}, Category: {transaction.category}. "
         base_explanation += f"Statistical score: {stats_score:.2f}, ML score: {ml_score:.2f}, Combined: {combined_score:.2f}. "
-        
+
         if cause == CauseEnum.STATISTICAL_SPIKE:
             base_explanation += "Detected as statistical outlier (unusual magnitude)."
             advice = "Review transaction amount against historical category averages."
@@ -238,7 +238,7 @@ class AnomalyDetectionService:
         else:
             base_explanation += "Within normal parameters."
             advice = "No action needed."
-        
+
         return base_explanation, advice
 
     def _determine_severity(self, combined_score: float) -> SeverityEnum:

@@ -1,11 +1,9 @@
 """Monitoring and performance observability service"""
 
-import time
 import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from dataclasses import dataclass, asdict
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +17,8 @@ class PerformanceMetric:
     duration_ms: float
     status_code: int
     timestamp: datetime
-    user_id: Optional[str] = None
-    error: Optional[str] = None
+    user_id: str | None = None
+    error: str | None = None
 
 
 class PerformanceMonitor:
@@ -29,11 +27,11 @@ class PerformanceMonitor:
     def __init__(self, window_size: int = 1000):
         """
         Initialize monitor.
-        
+
         Args:
             window_size: Number of recent metrics to keep in memory
         """
-        self.metrics: List[PerformanceMetric] = []
+        self.metrics: list[PerformanceMetric] = []
         self.window_size = window_size
         self._lock = None  # For thread-safety in production
 
@@ -43,8 +41,8 @@ class PerformanceMonitor:
         method: str,
         duration_ms: float,
         status_code: int,
-        user_id: Optional[str] = None,
-        error: Optional[str] = None,
+        user_id: str | None = None,
+        error: str | None = None,
     ) -> None:
         """Record a single API call metric"""
         metric = PerformanceMetric(
@@ -71,14 +69,14 @@ class PerformanceMonitor:
 
     def get_endpoint_stats(
         self, endpoint: str = None, minutes: int = 60
-    ) -> Dict:
+    ) -> dict:
         """
         Get aggregated statistics for endpoint(s).
-        
+
         Args:
             endpoint: Specific endpoint to filter (None = all)
             minutes: Time window to consider
-            
+
         Returns:
             Dictionary with aggregated metrics
         """
@@ -120,7 +118,7 @@ class PerformanceMonitor:
             "window_minutes": minutes,
         }
 
-    def get_slowest_endpoints(self, limit: int = 10, minutes: int = 60) -> List[Dict]:
+    def get_slowest_endpoints(self, limit: int = 10, minutes: int = 60) -> list[dict]:
         """Get slowest endpoints by average duration"""
         cutoff = datetime.utcnow() - timedelta(minutes=minutes)
         relevant_metrics = [m for m in self.metrics if m.timestamp >= cutoff]
@@ -144,7 +142,7 @@ class PerformanceMonitor:
             stats, key=lambda x: x["avg_duration_ms"], reverse=True
         )[:limit]
 
-    def get_error_summary(self, minutes: int = 60) -> Dict:
+    def get_error_summary(self, minutes: int = 60) -> dict:
         """Get summary of errors in time window"""
         cutoff = datetime.utcnow() - timedelta(minutes=minutes)
         relevant_metrics = [m for m in self.metrics if m.timestamp >= cutoff]
@@ -172,7 +170,7 @@ class HealthChecker:
     """System health status checks"""
 
     def __init__(self):
-        self.checks: Dict[str, bool] = {
+        self.checks: dict[str, bool] = {
             "database": True,
             "ml_model": True,
             "cache": True,
@@ -192,7 +190,7 @@ class HealthChecker:
         critical = ["database", "ml_model"]
         return all(self.checks.get(c, False) for c in critical)
 
-    def get_status(self) -> Dict:
+    def get_status(self) -> dict:
         """Get full health status"""
         return {
             "healthy": self.is_healthy(),
@@ -235,9 +233,9 @@ class MetricsCollector:
     """Collect and aggregate system metrics"""
 
     def __init__(self):
-        self.counters: Dict[str, int] = defaultdict(int)
-        self.gauges: Dict[str, float] = {}
-        self.histograms: Dict[str, List[float]] = defaultdict(list)
+        self.counters: dict[str, int] = defaultdict(int)
+        self.gauges: dict[str, float] = {}
+        self.histograms: dict[str, list[float]] = defaultdict(list)
 
     def increment_counter(self, name: str, value: int = 1):
         """Increment a counter metric"""
@@ -251,7 +249,7 @@ class MetricsCollector:
         """Record a value in a histogram"""
         self.histograms[name].append(value)
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Get all collected metrics"""
         return {
             "counters": dict(self.counters),

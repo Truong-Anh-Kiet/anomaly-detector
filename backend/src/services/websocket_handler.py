@@ -3,21 +3,20 @@ WebSocket Endpoint Handler
 Handles WebSocket connections and message routing
 """
 
-from fastapi import WebSocket, WebSocketDisconnect, HTTPException, status
+import logging
+import uuid
+from datetime import datetime
+
+from fastapi import HTTPException, WebSocket, status
 from sqlalchemy.orm import Session
+
+from src.services.auth_service import AuthService
 from src.services.event_manager import (
-    EventManager,
     EventConnection,
+    EventManager,
     EventType,
     get_event_manager,
 )
-from src.services.auth_service import AuthService
-from src.models import User
-import logging
-import json
-import uuid
-from datetime import datetime
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -39,19 +38,19 @@ class WebSocketHandler:
     async def connect(self, websocket: WebSocket, db: Session) -> EventConnection:
         """
         Establish WebSocket connection and authenticate
-        
+
         Args:
             websocket: FastAPI WebSocket
             db: Database session
-            
+
         Returns:
             EventConnection object
-            
+
         Raises:
             HTTPException: If authentication fails
         """
         await websocket.accept()
-        
+
         try:
             # Get auth token from query params
             token = websocket.query_params.get("token")
@@ -118,7 +117,7 @@ class WebSocketHandler:
     async def disconnect(self, connection_id: str):
         """
         Disconnect WebSocket connection
-        
+
         Args:
             connection_id: ID of connection to disconnect
         """
@@ -135,12 +134,12 @@ class WebSocketHandler:
     ) -> dict:
         """
         Handle incoming WebSocket message
-        
+
         Args:
             websocket: WebSocket connection
             connection_id: ID of the connection
             message: Parsed JSON message
-            
+
         Returns:
             Response to send back
         """
@@ -188,7 +187,7 @@ class WebSocketHandler:
     async def _handle_subscribe(self, connection: EventConnection, payload: dict) -> dict:
         """Handle subscribe request"""
         event_type = payload.get("event_type")
-        
+
         try:
             event_enum = EventType(event_type)
             connection.subscribe(event_enum)
@@ -206,7 +205,7 @@ class WebSocketHandler:
     async def _handle_unsubscribe(self, connection: EventConnection, payload: dict) -> dict:
         """Handle unsubscribe request"""
         event_type = payload.get("event_type")
-        
+
         try:
             event_enum = EventType(event_type)
             connection.unsubscribe(event_enum)
@@ -243,7 +242,7 @@ class WebSocketHandler:
         """Handle history request"""
         event_type = payload.get("event_type")
         limit = payload.get("limit", 50)
-        
+
         if event_type:
             history = [
                 e for e in self.event_manager.event_history
@@ -265,7 +264,7 @@ class WebSocketHandler:
     ):
         """Broadcast event to all subscribed connections"""
         event_type = event.get("event_type")
-        
+
         # Find all connections that should receive this event
         if event_type:
             recipients = [
@@ -280,7 +279,7 @@ class WebSocketHandler:
 
 
 # Create global handler instance
-ws_handler: Optional[WebSocketHandler] = None
+ws_handler: WebSocketHandler | None = None
 
 
 def get_ws_handler(auth_service: AuthService) -> WebSocketHandler:

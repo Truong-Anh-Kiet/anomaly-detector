@@ -1,6 +1,5 @@
 """Configuration and settings for Anomaly Detector API"""
 
-import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings

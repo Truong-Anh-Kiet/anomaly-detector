@@ -1,9 +1,10 @@
 """Category management API endpoints"""
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from pydantic import BaseModel
 import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from src.database import get_db
 from src.models.category import Category
@@ -30,15 +31,15 @@ class CategoryUpdateRequest(BaseModel):
 async def list_categories(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), # noqa: B008
 ) -> dict:
     """
     List all transaction categories.
-    
+
     Query Parameters:
     - skip: Number of results to skip (pagination)
     - limit: Number of results to return (max 500)
-    
+
     Returns:
         - total: Total categories
         - count: Number of categories in this page
@@ -46,15 +47,15 @@ async def list_categories(
     """
     try:
         query = db.query(Category)
-        
+
         # Get total count
         total = query.count()
-        
+
         # Get paginated results
         categories = query.order_by(
             Category.category_name
         ).offset(skip).limit(limit).all()
-        
+
         # Convert to response format
         category_items = [
             {
@@ -66,7 +67,7 @@ async def list_categories(
             }
             for c in categories
         ]
-        
+
         return {
             "status": "success",
             "total": total,
@@ -75,20 +76,20 @@ async def list_categories(
             "limit": limit,
             "categories": category_items
         }
-        
+
     except Exception as e:
         logger.error(f"Error listing categories: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to list categories: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to list categories: {str(e)}") from e
 
 
 @router.get("/{category_id}", response_model=dict)
 async def get_category_detail(
     category_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), # noqa: B008
 ) -> dict:
     """
     Get detailed information about a specific category.
-    
+
     Returns:
         - category_id: Category ID
         - category_name: Category name
@@ -100,10 +101,10 @@ async def get_category_detail(
         category = db.query(Category).filter(
             Category.category_id == category_id
         ).first()
-        
+
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
-        
+
         return {
             "status": "success",
             "category_id": category.category_id,
@@ -112,22 +113,22 @@ async def get_category_detail(
             "parent_category": category.parent_category,
             "created_at": category.created_at.isoformat() if hasattr(category, 'created_at') else None,
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting category detail: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to get category: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get category: {str(e)}") from e
 
 
 @router.post("", response_model=dict)
 async def create_category(
     category_data: CategoryCreateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), # noqa: B008
 ) -> dict:
     """
     Create a new transaction category.
-    
+
     Returns:
         - category_id: New category ID
         - category_name: Category name
@@ -138,23 +139,23 @@ async def create_category(
         existing = db.query(Category).filter(
             Category.category_name == category_data.category_name
         ).first()
-        
+
         if existing:
             raise HTTPException(status_code=400, detail="Category already exists")
-        
+
         # Create new category
         new_category = Category(
             category_name=category_data.category_name,
             description=category_data.description,
             parent_category=category_data.parent_category
         )
-        
+
         db.add(new_category)
         db.commit()
         db.refresh(new_category)
-        
+
         logger.info(f"Category created: {new_category.category_name}")
-        
+
         return {
             "status": "success",
             "category_id": new_category.category_id,
@@ -163,24 +164,24 @@ async def create_category(
             "parent_category": new_category.parent_category,
             "message": f"Category '{category_data.category_name}' created successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error creating category: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to create category: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to create category: {str(e)}") from e
 
 
 @router.put("/{category_id}", response_model=dict)
 async def update_category(
     category_id: str,
     category_data: CategoryUpdateRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db), # noqa: B008
 ) -> dict:
     """
     Update category information.
-    
+
     Returns:
         - category_id: Category ID
         - category_name: Updated name
@@ -190,12 +191,12 @@ async def update_category(
         category = db.query(Category).filter(
             Category.category_id == category_id
         ).first()
-        
+
         if not category:
             raise HTTPException(status_code=404, detail="Category not found")
-        
+
         changes = {}
-        
+
         # Update category name if provided
         if category_data.category_name and category_data.category_name != category.category_name:
             # Check if new name already exists
@@ -203,28 +204,28 @@ async def update_category(
                 Category.category_name == category_data.category_name,
                 Category.category_id != category_id
             ).first()
-            
+
             if existing:
                 raise HTTPException(status_code=400, detail="Category name already exists")
-            
+
             changes["category_name"] = category_data.category_name
             category.category_name = category_data.category_name
-        
+
         # Update description if provided
         if category_data.description is not None:
             changes["description"] = category_data.description
             category.description = category_data.description
-        
+
         # Update parent category if provided
         if category_data.parent_category is not None:
             changes["parent_category"] = category_data.parent_category
             category.parent_category = category_data.parent_category
-        
+
         db.commit()
         db.refresh(category)
-        
+
         logger.info(f"Category updated: {category.category_name} - Changes: {changes}")
-        
+
         return {
             "status": "success",
             "category_id": category.category_id,
@@ -233,10 +234,10 @@ async def update_category(
             "parent_category": category.parent_category,
             "message": f"Category '{category.category_name}' updated successfully"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error updating category: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to update category: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update category: {str(e)}") from e

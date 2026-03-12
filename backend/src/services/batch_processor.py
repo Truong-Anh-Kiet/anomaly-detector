@@ -2,18 +2,18 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Tuple
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
+
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 
 from src.config import get_settings
-from src.database import SessionLocal, Base, engine
-from src.models import Transaction, AnomalyDetectionResult, Category
-from src.utils.csv_utils import CSVParser, CSVValidationError
-from src.services.anomaly_detector import AnomalyDetectionService
+from src.database import Base, SessionLocal, engine
 from src.ml.anomaly_model import AnomalyModel
+from src.models import Category, Transaction
+from src.services.anomaly_detector import AnomalyDetectionService
+from src.utils.csv_utils import CSVParser
 
 logger = logging.getLogger(__name__)
 
@@ -61,17 +61,17 @@ class BatchProcessorService:
             logger.info("Batch scheduler stopped")
 
     def process_batch(
-        self, csv_file_path: Optional[str] = None, retry_count: int = 0
+        self, csv_file_path: str | None = None, retry_count: int = 0
     ) -> dict:
         """
         Process batch: import CSV, detect anomalies, persist results.
-        
+
         Implements auto-retry with exponential backoff on failure.
-        
+
         Args:
             csv_file_path: Path to CSV file (if None, uses configured path)
             retry_count: Current retry attempt
-            
+
         Returns:
             Status dictionary with processing results
         """
@@ -86,7 +86,7 @@ class BatchProcessorService:
             # Step 2: Parse CSV
             csv_path = csv_file_path or self._get_csv_path()
             transactions_data = self.csv_parser.parse_file(csv_path)
-            
+
             if not transactions_data:
                 logger.warning("No valid transactions found in CSV")
                 return self._batch_status("completed", 0, 0)
@@ -104,7 +104,7 @@ class BatchProcessorService:
 
             # Step 5: Persist results
             anomaly_count = 0
-            for txn, result, severity in results_with_severity:
+            for result in results_with_severity:
                 try:
                     db.add(result)
                     if result.result.value == "Anomaly":
@@ -134,7 +134,7 @@ class BatchProcessorService:
                 logger.info(f"Retrying batch in {backoff_seconds} seconds...")
                 time.sleep(backoff_seconds)
                 return self.process_batch(csv_file_path, retry_count + 1)
-            
+
             # Final failure
             status = self._batch_status("failed", 0, 0, error=str(e))
             self.last_batch_status = status
@@ -144,11 +144,11 @@ class BatchProcessorService:
             db.close()
 
     def _import_transactions(
-        self, db: Session, transactions_data: List[dict]
-    ) -> List[Transaction]:
+        self, db: Session, transactions_data: list[dict]
+    ) -> list[Transaction]:
         """
         Import transaction records from parsed CSV data.
-        
+
         Implements duplicate detection by (date, category, amount).
         """
         imported = []
@@ -208,7 +208,7 @@ class BatchProcessorService:
         status: str,
         transactions_processed: int = 0,
         anomalies_detected: int = 0,
-        error: Optional[str] = None,
+        error: str | None = None,
     ) -> dict:
         """Create batch status object"""
         return {
@@ -219,6 +219,6 @@ class BatchProcessorService:
             "error": error,
         }
 
-    def get_last_batch_status(self) -> Optional[dict]:
+    def get_last_batch_status(self) -> dict | None:
         """Get status of last batch run"""
         return self.last_batch_status

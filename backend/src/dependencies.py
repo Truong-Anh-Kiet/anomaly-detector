@@ -1,13 +1,15 @@
 """FastAPI dependencies for shared components across routes"""
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
-from sqlalchemy.orm import Session
-from src.config import get_settings, Settings
-from src.database import SessionLocal
-from src.models import User, RoleEnum
-from src.services.auth_service import AuthService
 import logging
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthCredentials, HTTPBearer
+from sqlalchemy.orm import Session
+
+from src.config import Settings, get_settings
+from src.database import SessionLocal
+from src.models import RoleEnum, User
+from src.services.auth_service import AuthService
 
 logger = logging.getLogger(__name__)
 
@@ -45,16 +47,16 @@ security = HTTPBearer()
 
 # JWT verification dependency
 async def get_current_user(
-    credentials: HTTPAuthCredentials = Depends(security),
-    db: Session = Depends(get_db),
-    auth_service: AuthService = Depends(get_auth_service),
+    credentials: HTTPAuthCredentials = Depends(security), # noqa: B008
+    db: Session = Depends(get_db), # noqa: B008
+    auth_service: AuthService = Depends(get_auth_service), # noqa: B008
 ) -> User:
     """
     Get current authenticated user from JWT token.
     Validates JWT signature and expiration.
     """
     token = credentials.credentials
-    
+
     # Verify token
     token_payload = auth_service.verify_token(token)
     if not token_payload:
@@ -78,7 +80,7 @@ async def get_current_user(
 
 # Role-based authorization dependencies
 async def get_admin_user(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user), # noqa: B008
 ) -> User:
     """Allow only Admin role"""
     if current_user.role != RoleEnum.ADMIN:
@@ -90,7 +92,7 @@ async def get_admin_user(
 
 
 async def get_manager_or_admin_user(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user), # noqa: B008
 ) -> User:
     """Allow Manager and Admin roles"""
     if current_user.role not in (RoleEnum.MANAGER, RoleEnum.ADMIN):
@@ -103,7 +105,7 @@ async def get_manager_or_admin_user(
 
 async def authorize_category_access(
     category: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user), # noqa: B008
 ) -> str:
     """
     Authorize user access to a specific category.
@@ -112,7 +114,7 @@ async def authorize_category_access(
     """
     if current_user.role in (RoleEnum.ADMIN, RoleEnum.MANAGER):
         return category
-    
+
     # Analyst role
     if current_user.role == RoleEnum.ANALYST:
         assigned = current_user.assigned_categories or []
@@ -122,7 +124,7 @@ async def authorize_category_access(
                 detail=f"Access denied to category '{category}'",
             )
         return category
-    
+
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="Insufficient permissions",

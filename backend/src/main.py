@@ -1,17 +1,19 @@
 """FastAPI application initialization and configuration"""
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import logging
 from contextlib import asynccontextmanager
 
-from src.config import get_settings
-from src.database import init_db
-from src.api.websocket import router as websocket_router
+import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from src.api.anomalies import router as anomalies_router
 from src.api.audit_logs import router as audit_logs_router
-from src.api.users import router as users_router
 from src.api.categories import router as categories_router
+from src.api.users import router as users_router
+from src.api.websocket import router as websocket_router
+from src.config import get_settings
+from src.database import init_db
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,16 +29,16 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Anomaly Detector API...")
     init_db()
     logger.info("Database initialized")
-    
+
     yield
-    
+
     # Shutdown
     logger.info("Shutting down Anomaly Detector API...")
 
 
 def create_app() -> FastAPI:
     """Create and configure FastAPI application"""
-    
+
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
@@ -71,7 +73,7 @@ def create_app() -> FastAPI:
 
     # Include WebSocket routes
     app.include_router(websocket_router)
-    
+
     # Include API routers
     app.include_router(anomalies_router)
     app.include_router(audit_logs_router)
@@ -80,13 +82,10 @@ def create_app() -> FastAPI:
 
     return app
 
-
 # Create app instance
 app = create_app()
 
-
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(
         "src.main:app",
         host="0.0.0.0",

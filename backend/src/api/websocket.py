@@ -3,14 +3,17 @@ WebSocket Routes
 Real-time event streaming endpoints
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from sqlalchemy.orm import Session
-from src.dependencies import get_db, get_auth_service
-from src.services.event_manager import get_event_manager, EventType
-from src.services.websocket_handler import get_ws_handler
-from src.services.auth_service import AuthService
-import logging
 import json
+import logging
+
+import pandas as pd
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from sqlalchemy.orm import Session
+
+from src.dependencies import get_auth_service, get_db
+from src.services.auth_service import AuthService
+from src.services.event_manager import EventType, get_event_manager
+from src.services.websocket_handler import get_ws_handler
 
 logger = logging.getLogger(__name__)
 
@@ -20,21 +23,21 @@ router = APIRouter(prefix="/ws", tags=["websocket"])
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    db: Session = Depends(get_db),
-    auth_service: AuthService = Depends(get_auth_service),
+    db: Session = Depends(get_db), # noqa: B008
+    auth_service: AuthService = Depends(get_auth_service), # noqa: B008
 ):
     """
     WebSocket endpoint for real-time event streaming
-    
+
     Query Parameters:
         token (str): JWT authentication token
-        
+
     Client Message Format:
         {
             "type": "subscribe|unsubscribe|ping|get_stats|get_history",
             "payload": {...}
         }
-        
+
     Server Response Format:
         {
             "type": "event_type|subscribed|unsubscribed|error|...",
@@ -43,20 +46,19 @@ async def websocket_endpoint(
         }
     """
     connection = None
-    
+
     try:
         # Initialize handler
         handler = get_ws_handler(auth_service)
-        
+
         # Authenticate and establish connection
         connection = await handler.connect(websocket, db)
-        event_manager = get_event_manager()
-        
+
         # Main message loop
         while True:
             # Receive message from client
             data = await websocket.receive_text()
-            
+
             try:
                 message = json.loads(data)
             except json.JSONDecodeError:
@@ -80,7 +82,7 @@ async def websocket_endpoint(
         if connection:
             await handler.disconnect(connection.connection_id)
         logger.info(f"Client disconnected: {connection.connection_id if connection else 'unknown'}")
-        
+
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
         if connection:
@@ -93,11 +95,11 @@ async def websocket_endpoint(
 
 @router.get("/stats", tags=["monitoring"])
 async def get_websocket_stats(
-    event_manager = Depends(get_event_manager),
+    event_manager = Depends(get_event_manager), # noqa: B008
 ):
     """
     Get WebSocket connection statistics
-    
+
     Returns:
         {
             "total_connections": int,
@@ -117,15 +119,15 @@ async def get_websocket_stats(
 async def get_event_history(
     event_type: str,
     limit: int = 50,
-    event_manager = Depends(get_event_manager),
+    event_manager = Depends(get_event_manager), # noqa: B008
 ):
     """
     Get historical events for a specific type
-    
+
     Args:
         event_type (str): Type of event (anomaly_detected, threshold_exceeded, etc.)
         limit (int): Maximum number of events to return (default: 50)
-        
+
     Returns:
         {
             "event_type": "anomaly_detected",
@@ -157,11 +159,11 @@ async def get_event_history(
 
 @router.get("/health", tags=["monitoring"])
 async def websocket_health(
-    event_manager = Depends(get_event_manager),
+    event_manager = Depends(get_event_manager), # noqa: B008
 ):
     """
     Check WebSocket system health
-    
+
     Returns:
         {
             "status": "healthy",

@@ -1,10 +1,12 @@
 """Audit logging service for compliance and audit trails"""
 
-import logging
 import json
+import logging
 from datetime import datetime, timedelta
+
 from sqlalchemy.orm import Session
-from src.models import AuditLog, User
+
+from src.models import AuditLog
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class AuditLoggerService:
     ) -> AuditLog:
         """
         Log a user action to audit trail.
-        
+
         Args:
             db: Database session
             user_id: ID of user performing action
@@ -35,7 +37,7 @@ class AuditLoggerService:
             resource_type: Type of resource affected (e.g., "anomaly", "model", "user")
             resource_id: ID of resource affected
             details: Additional context as dict
-            
+
         Returns:
             Created AuditLog object
         """
@@ -50,7 +52,7 @@ class AuditLoggerService:
             db.add(log_entry)
             db.commit()
             db.refresh(log_entry)
-            
+
             logger.debug(
                 f"Logged action: {action} by user {user_id} on {resource_type}:{resource_id}"
             )
@@ -92,14 +94,14 @@ class AuditLoggerService:
     ) -> list:
         """
         Query audit logs with filters.
-        
+
         Args:
             db: Database session
             user_id: Filter by user ID
             action: Filter by action name
             days: Look back days (default 30)
             exclude_archived: Exclude soft-deleted logs
-            
+
         Returns:
             List of AuditLog objects
         """
@@ -114,14 +116,14 @@ class AuditLoggerService:
             query = query.filter(AuditLog.action == action)
 
         if exclude_archived:
-            query = query.filter(AuditLog.archived_at == None)
+            query = query.filter(AuditLog.archived_at is None)
 
         return query.order_by(AuditLog.timestamp.desc()).all()
 
     def archive_old_logs(self, db: Session) -> int:
         """
         Archive logs older than ARCHIVE_DAYS (soft-delete).
-        
+
         Returns:
             Number of logs archived
         """
@@ -131,7 +133,7 @@ class AuditLoggerService:
             db.query(AuditLog)
             .filter(
                 AuditLog.timestamp < cutoff_date,
-                AuditLog.archived_at == None,
+                AuditLog.archived_at is None,
             )
             .update({"archived_at": datetime.utcnow()})
         )
@@ -143,7 +145,7 @@ class AuditLoggerService:
     def hard_delete_old_logs(self, db: Session) -> int:
         """
         Permanently delete logs older than DELETE_DAYS.
-        
+
         Returns:
             Number of logs deleted
         """
